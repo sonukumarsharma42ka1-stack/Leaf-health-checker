@@ -1,0 +1,94 @@
+import streamlit as st
+import cv2
+import numpy as np
+from PIL import Image
+
+st.title("🌿 Leaf Health Check System")
+
+st.write("Upload a plant leaf image to analyze plant health.")
+
+uploaded_file = st.file_uploader("Upload Leaf Image", type=["jpg","png","jpeg"])
+
+def calculate_severity(percent):
+    if percent <= 10:
+        return "Healthy"
+    elif percent <= 30:
+        return "Mild"
+    elif percent <= 60:
+        return "Moderate"
+    elif percent <= 80:
+        return "Severe"
+    else:
+        return "Dying"
+
+def get_rescue_tips(severity):
+    tips = {
+        "Healthy":[
+            "Maintain proper watering schedule",
+            "Ensure adequate sunlight",
+            "Monitor plant regularly"
+        ],
+        "Mild":[
+            "Adjust watering levels",
+            "Add organic fertilizer",
+            "Remove slightly damaged leaves"
+        ],
+        "Moderate":[
+            "Apply plant nutrients",
+            "Check for pests",
+            "Improve soil quality"
+        ],
+        "Severe":[
+            "Apply disease treatment spray",
+            "Remove infected leaves",
+            "Isolate plant from others"
+        ],
+        "Dying":[
+            "Cut severely damaged parts",
+            "Apply strong treatment",
+            "Replant in fresh soil"
+        ]
+    }
+    return tips[severity]
+
+if uploaded_file is not None:
+
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Leaf Image", use_column_width=True)
+
+    img = np.array(image)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # yellow detection
+    yellow_lower = np.array([20,100,100])
+    yellow_upper = np.array([35,255,255])
+
+    # brown detection
+    brown_lower = np.array([10,100,20])
+    brown_upper = np.array([20,255,200])
+
+    yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
+    brown_mask = cv2.inRange(hsv, brown_lower, brown_upper)
+
+    disease_mask = yellow_mask + brown_mask
+
+    affected_pixels = np.sum(disease_mask > 0)
+    total_pixels = img.shape[0] * img.shape[1]
+
+    percent = (affected_pixels / total_pixels) * 100
+
+    severity = calculate_severity(percent)
+
+    st.subheader("Diagnosis Report")
+
+    st.write(f"Affected Area: {percent:.2f}%")
+    st.write(f"Severity Level: **{severity}**")
+
+    st.subheader("Rescue Tips")
+
+    tips = get_rescue_tips(severity)
+
+    for tip in tips:
+        st.write("✔",tip)
